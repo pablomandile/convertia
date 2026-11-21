@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.output/
+.nuxt/
+.nitro/
+.cache/
+.data/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Salida del cron de cotizaciones en local
+rates/out/
