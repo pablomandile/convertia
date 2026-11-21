@@ -11,9 +11,16 @@
     "build": "npm run generate -w apps/web",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "rates": "php rates/fetch.php --out=apps/web/public/api/v1",
+    "serve": "node apps/web/scripts/serve-static.mjs",
+    "e2e": "node apps/web/scripts/e2e-check.mjs",
+    "icons": "node apps/web/scripts/build-icons.mjs"
   },
   "engines": {
     "node": ">=22"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.18.1"
   }
 }

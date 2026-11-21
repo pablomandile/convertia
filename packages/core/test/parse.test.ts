@@ -106,4 +106,10 @@ describe('parseQuery: monedas', () => {
     expect(currencyName('EUR')).toBe('Euro')
     expect(currencyName('BTC')).toBe('Bitcoin')
   })
+
+  it('no lanza con códigos raros (Intl.DisplayNames tira RangeError)', () => {
+    expect(() => currencyName('ABCDE')).not.toThrow()
+    expect(currencyName('ABCDE')).toBe('ABCDE')
+    expect(currencyName('USDC')).toBe('USD Coin')
+  })
 })

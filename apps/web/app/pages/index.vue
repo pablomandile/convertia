@@ -1,115 +1,141 @@
 <script setup lang="ts">
-import { categories, convert, round } from '@convertia/core'
+import { categories } from '@convertia/core'
 
-// Portada provisoria de la F0: comprueba que la app usa el motor de `core`.
-// En la F1 se reemplaza por la barra inteligente y las categorías.
-const categoryId = ref(categories[0]!.id)
-const category = computed(() => categories.find(c => c.id === categoryId.value)!)
-
-const amount = ref('1')
-const from = ref(category.value.popular?.[0]?.[0] ?? category.value.units[0]!.id)
-const to = ref(category.value.popular?.[0]?.[1] ?? category.value.units[1]!.id)
-
-watch(categoryId, () => {
-  from.value = category.value.popular?.[0]?.[0] ?? category.value.units[0]!.id
-  to.value = category.value.popular?.[0]?.[1] ?? category.value.units[1]!.id
-})
-
-const nf = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 10 })
-
-const result = computed(() => {
-  const value = amount.value.replace(',', '.').trim()
-  if (value === '' || Number.isNaN(Number(value))) return '—'
-  return nf.format(round(convert(value, categoryId.value, from.value, to.value)))
-})
-
-function swap() {
-  [from.value, to.value] = [to.value, from.value]
+const ICONS: Record<string, string> = {
+  length: '📏',
+  mass: '⚖️',
+  temperature: '🌡️',
+  volume: '🧪',
+  area: '🗺️',
+  speed: '🏎️',
+  time: '⏱️',
+  data: '💾',
+  fuel: '⛽',
+  energy: '⚡',
+  power: '🔌',
+  pressure: '🎈',
+  angle: '🧭',
+  frequency: '📡',
+  density: '🧱',
 }
+
+const { favorites } = useFavorites()
+const { recent, clear } = useRecent()
+
+useSeoMeta({
+  title: 'Convertí unidades y monedas al instante',
+  titleTemplate: 'Convertia · %s',
+  description: 'Convertí unidades, más de 160 monedas, cripto y los dólares de Argentina. Escribí «100 usd a ars» y listo. Gratis y sin conexión.',
+})
 </script>
 
 <template>
-  <main class="mx-auto max-w-xl px-4 py-10">
-    <h1 class="text-3xl font-bold text-brand-700 dark:text-brand-500">
-      Convertia
-    </h1>
-    <p class="mt-1 text-slate-600 dark:text-slate-400">
-      Convertí unidades, monedas y mucho más.
-    </p>
+  <div class="space-y-10">
+    <section class="pt-4 sm:pt-10">
+      <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">
+        ¿Qué querés convertir?
+      </h1>
+      <p class="mt-2 text-slate-600 dark:text-slate-400">
+        Escribilo como te salga: unidades, monedas, cripto. Funciona sin conexión.
+      </p>
+      <div class="mt-6">
+        <SmartBar />
+      </div>
+    </section>
 
-    <section class="mt-8 space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-      <label class="block">
-        <span class="text-sm font-medium">Categoría</span>
-        <select
-          v-model="categoryId"
-          class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent p-2 dark:border-slate-700"
+    <section v-if="favorites.length">
+      <h2 class="text-lg font-semibold">
+        Favoritos
+      </h2>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <NuxtLink
+          v-for="f in favorites"
+          :key="f.key"
+          :to="f.href"
+          class="inline-flex items-center gap-1.5 rounded-full border border-amber-300 px-3 py-1 text-sm hover:border-amber-500 dark:border-amber-700"
         >
-          <option
-            v-for="c in categories"
-            :key="c.id"
-            :value="c.id"
-          >
-            {{ c.name.es }}
-          </option>
-        </select>
-      </label>
+          <AppIcon
+            name="star"
+            :size="14"
+            filled
+            class="text-amber-500"
+          /> {{ f.label }}
+        </NuxtLink>
+      </div>
+    </section>
 
-      <label class="block">
-        <span class="text-sm font-medium">Valor</span>
-        <input
-          v-model="amount"
-          inputmode="decimal"
-          class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent p-2 text-lg dark:border-slate-700"
-        >
-      </label>
-
-      <div class="flex items-end gap-2">
-        <label class="block min-w-0 flex-1">
-          <span class="text-sm font-medium">De</span>
-          <select
-            v-model="from"
-            class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent p-2 dark:border-slate-700"
-          >
-            <option
-              v-for="u in category.units"
-              :key="u.id"
-              :value="u.id"
-            >
-              {{ u.name.es }} ({{ u.symbol }})
-            </option>
-          </select>
-        </label>
+    <section v-if="recent.length">
+      <div class="flex items-baseline justify-between">
+        <h2 class="text-lg font-semibold">
+          Recientes
+        </h2>
         <button
           type="button"
-          class="rounded-lg border border-slate-300 p-2 dark:border-slate-700"
-          aria-label="Invertir unidades"
-          @click="swap"
+          class="text-sm text-slate-500 hover:underline"
+          @click="clear"
         >
-          ⇄
+          Borrar
         </button>
-        <label class="block min-w-0 flex-1">
-          <span class="text-sm font-medium">A</span>
-          <select
-            v-model="to"
-            class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent p-2 dark:border-slate-700"
-          >
-            <option
-              v-for="u in category.units"
-              :key="u.id"
-              :value="u.id"
-            >
-              {{ u.name.es }} ({{ u.symbol }})
-            </option>
-          </select>
-        </label>
       </div>
-
-      <output
-        class="block rounded-xl bg-brand-50 p-4 text-2xl font-semibold text-brand-900 dark:bg-brand-900/30 dark:text-brand-100"
-        aria-live="polite"
-      >
-        {{ result }}
-      </output>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <NuxtLink
+          v-for="r in recent"
+          :key="r.key"
+          :to="r.href"
+          class="rounded-full border border-slate-200 px-3 py-1 text-sm hover:border-brand-500 dark:border-slate-700"
+        >
+          {{ r.label }}
+        </NuxtLink>
+      </div>
     </section>
-  </main>
+
+    <section>
+      <h2 class="text-lg font-semibold">
+        Categorías
+      </h2>
+      <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <NuxtLink
+          to="/monedas"
+          class="col-span-2 flex items-center gap-3 rounded-xl border border-brand-100 bg-brand-50 p-4 hover:border-brand-500 sm:col-span-3 dark:border-brand-900 dark:bg-brand-900/20"
+        >
+          <span
+            class="text-2xl"
+            aria-hidden="true"
+          >💱</span>
+          <span>
+            <span class="block font-semibold">Monedas</span>
+            <span class="block text-sm text-slate-600 dark:text-slate-400">160+ monedas, cripto y dólares de Argentina</span>
+          </span>
+        </NuxtLink>
+        <NuxtLink
+          v-for="c in categories"
+          :key="c.id"
+          :to="`/${c.slug}`"
+          class="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 p-3 hover:border-brand-500 dark:border-slate-800"
+        >
+          <span
+            class="text-xl"
+            aria-hidden="true"
+          >{{ ICONS[c.id] ?? '🔁' }}</span>
+          <span class="min-w-0 leading-tight font-medium">{{ c.name.es }}</span>
+        </NuxtLink>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-semibold">
+        Monedas más buscadas
+      </h2>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <NuxtLink
+          v-for="[f, t] in popularCurrencyPairs.slice(0, 8)"
+          :key="`${f}-${t}`"
+          :to="currencyPairPath(f, t)"
+          class="rounded-full border border-slate-200 px-3 py-1 text-sm hover:border-brand-500 hover:text-brand-700 dark:border-slate-700"
+        >
+          {{ f }} a {{ t }}
+        </NuxtLink>
+      </div>
+    </section>
+  </div>
 </template>

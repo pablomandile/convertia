@@ -85,9 +85,24 @@ export function currencyName(code: string, locale = 'es'): string {
       displayNames.set(locale, null)
     }
   }
-  const extra: Record<string, string> = { BTC: 'Bitcoin', ETH: 'Ether', USDT: 'Tether', XAU: 'Oro (onza troy)', XAG: 'Plata (onza troy)' }
+  const extra: Record<string, string> = {
+    BTC: 'Bitcoin',
+    ETH: 'Ether',
+    USDT: 'Tether',
+    USDC: 'USD Coin',
+    SOL: 'Solana',
+    XAU: 'Oro (onza troy)',
+    XAG: 'Plata (onza troy)',
+  }
   if (extra[code]) return extra[code]
-  const name = displayNames.get(locale)?.of(code)
+  let name: string | undefined
+  try {
+    // Lanza RangeError con códigos que no son de 3 letras (USDC, etc.): nunca debe romper la página.
+    name = displayNames.get(locale)?.of(code)
+  }
+  catch {
+    name = undefined
+  }
   if (!name || name === code) return code
   return name.charAt(0).toUpperCase() + name.slice(1)
 }

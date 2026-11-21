@@ -15,5 +15,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
-# Salida del cron de cotizaciones en local
+# Salida del cron de cotizaciones en local (en producción la escribe el cron en public_html/api/v1)
 rates/out/
+apps/web/public/api/

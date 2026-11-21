@@ -1,0 +1,4 @@
+# Todo lo de /_nuxt/ lleva hash en el nombre: cambia de nombre cuando cambia el contenido.
+<IfModule mod_headers.c>
+  Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>

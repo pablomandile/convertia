@@ -1,0 +1,38 @@
+# Convertia — sitio estático generado por Nuxt.
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # HTTPS siempre
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # /longitud/pies-a-metros → /longitud/pies-a-metros/index.html (lo prerenderizado)
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME}/index.html -f
+  RewriteRule ^(.*?)/?$ $1/index.html [L]
+
+  # Todo lo demás que no existe (pares no prerenderizados) lo resuelve la app en el navegador.
+  RewriteCond %{REQUEST_URI} !^/api/
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ /200.html [L]
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType text/javascript .js
+</IfModule>
+
+<IfModule mod_headers.c>
+  # (Los assets con hash de /_nuxt/ se cachean para siempre: ver public/_nuxt/.htaccess.)
+  # El HTML, el service worker y el manifest, siempre frescos: por ahí se entera el navegador
+  # de que hay versión nueva. Sin Expires, que el CDN de Hostinger respeta a su manera.
+  <FilesMatch "(\.html|^sw\.js|^manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache, must-revalidate, max-age=0"
+    Header unset Expires
+  </FilesMatch>
+</IfModule>
