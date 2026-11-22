@@ -25,3 +25,10 @@ export {
   toISODate, wallTime, weekday, zonedToInstant, zoneOffsetMinutes,
 } from './tools/fechas'
 export type { CalendarDate, City } from './tools/fechas'
+export { PAPER_SIZES, paperPixels, ringFromCircumference, ringFromDiameter, ringFromUS, SHOE_SYSTEMS, shoeSizes } from './tools/talles'
+export type { PaperSize, ShoeSystem } from './tools/talles'
+export {
+  aspectRatio, contrastRatio, convertCss, CSS_UNITS, cssToPx, hslToRgb, luminance, parseColor, rgbToCmyk, rgbToHsl,
+  screenDensity, toHex, wcag,
+} from './tools/diseno'
+export type { CssUnit, RGBA } from './tools/diseno'

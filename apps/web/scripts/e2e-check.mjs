@@ -18,7 +18,7 @@ import puppeteer from 'puppeteer-core'
 
 const PORT = 4199
 // Páginas de herramientas que se revisan en el chequeo de desborde (sumar las nuevas).
-const TOOL_PAGES = ['/numeros/romanos', '/numeros/bases', '/numeros/a-letras', '/dolar', '/inflacion', '/cuotas', '/plazo-fijo', '/iva', '/cocina', '/cocina/horno', '/cocina/escalar-receta', '/husos-horarios', '/fechas/diferencia', '/fechas/edad', '/fechas/timestamp']
+const TOOL_PAGES = ['/numeros/romanos', '/numeros/bases', '/numeros/a-letras', '/dolar', '/inflacion', '/cuotas', '/plazo-fijo', '/iva', '/cocina', '/cocina/horno', '/cocina/escalar-receta', '/husos-horarios', '/fechas/diferencia', '/fechas/edad', '/fechas/timestamp', '/talles/calzado', '/talles/anillos', '/papel', '/colores', '/diseno/px-a-rem', '/diseno/ppi']
 const BASE = `http://127.0.0.1:${PORT}`
 const SHOTS = process.argv.find(a => a.startsWith('--shots='))?.slice(8)
 if (SHOTS) mkdirSync(SHOTS, { recursive: true })
@@ -162,6 +162,16 @@ try {
   check('timestamp: 1700000000 = 2023-11-14T22:13:20.000Z', (await outputs()).includes('2023-11-14T22:13:20.000Z'), (await outputs()).join(' | '))
   await page.goto(`${BASE}/fechas/edad`, { waitUntil: 'networkidle0' })
   check('edad: calcula desde 1990-05-15', (await outputs()).some(o => /^3\d años/.test(o)), (await outputs()).join(' | '))
+  await page.goto(`${BASE}/talles/calzado`, { waitUntil: 'networkidle0' })
+  check('calzado: AR 40 = EU 41', await page.evaluate(() => [...document.querySelectorAll('dl div')].some(d => d.textContent.includes('Europa') && d.textContent.includes('41'))))
+  await page.goto(`${BASE}/papel`, { waitUntil: 'networkidle0' })
+  check('papel: A4 = 210 × 297 mm y 2.480 × 3.508 px a 300 ppp', (await outputs()).includes('210 × 297 mm') && (await outputs()).includes('2.480 × 3.508 px'), (await outputs()).join(' | '))
+  await page.goto(`${BASE}/colores`, { waitUntil: 'networkidle0' })
+  check('colores: #0f766e = hsl(175 77% 26%)', (await outputs()).includes('hsl(175 77% 26%)'), (await outputs()).join(' | '))
+  await page.goto(`${BASE}/diseno/px-a-rem`, { waitUntil: 'networkidle0' })
+  check('px a rem: 24px = 1.5rem', (await outputs()).includes('1.5rem'), (await outputs()).join(' | '))
+  await page.goto(`${BASE}/diseno/ppi`, { waitUntil: 'networkidle0' })
+  check('PPI: Full HD 24″ = 91,8', (await outputs()).includes('91,8 PPI'), (await outputs()).join(' | '))
   const sitemapXml = await (await fetch(`${BASE}/sitemap.xml`)).text()
   check('sitemap.xml lista categorías y herramientas', sitemapXml.includes('/longitud/pies-a-metros</loc>') && sitemapXml.includes('/numeros/romanos</loc>'))
 
