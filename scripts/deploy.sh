@@ -27,13 +27,21 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
+# El build de producción usa apps/web/.env.production (NUNCA .env, que apunta al Supabase local).
+# Para publicar sin cuentas, crearlo con las dos variables vacías.
+test -f apps/web/.env.production || { echo "Falta apps/web/.env.production (ver apps/web/.env.example)." >&2; exit 1; }
+
 if [ -z "${SKIP_BUILD:-}" ]; then
-  npm run build
+  npm run generate:prod -w apps/web
 fi
 
 DIST=apps/web/.output/public
 test -f "$DIST/index.html" || { echo "No hay build en $DIST" >&2; exit 1; }
 test ! -e "$DIST/api" || { echo "El build trae api/: pisaría las cotizaciones del cron" >&2; exit 1; }
+if grep -rqE '127\.0\.0\.1:5432|localhost:5432' "$DIST" --include='*.html' --include='*.js'; then
+  echo "El build apunta al Supabase LOCAL: se armó con .env en vez de .env.production. No se sube." >&2
+  exit 1
+fi
 
 RELEASE="$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)"
 echo "→ Subiendo release $RELEASE a $SSH_ALIAS:$ROOT"

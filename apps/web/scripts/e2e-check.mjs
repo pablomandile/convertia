@@ -18,7 +18,7 @@ import puppeteer from 'puppeteer-core'
 
 const PORT = 4199
 // Páginas de herramientas que se revisan en el chequeo de desborde (sumar las nuevas).
-const TOOL_PAGES = ['/numeros/romanos', '/numeros/bases', '/numeros/a-letras', '/dolar', '/inflacion', '/cuotas', '/plazo-fijo', '/iva', '/cocina', '/cocina/horno', '/cocina/escalar-receta', '/husos-horarios', '/fechas/diferencia', '/fechas/edad', '/fechas/timestamp', '/talles/calzado', '/talles/anillos', '/papel', '/colores', '/diseno/px-a-rem', '/diseno/ppi']
+const TOOL_PAGES = ['/numeros/romanos', '/numeros/bases', '/numeros/a-letras', '/dolar', '/inflacion', '/cuotas', '/plazo-fijo', '/iva', '/cocina', '/cocina/horno', '/cocina/escalar-receta', '/husos-horarios', '/fechas/diferencia', '/fechas/edad', '/fechas/timestamp', '/talles/calzado', '/talles/anillos', '/papel', '/colores', '/diseno/px-a-rem', '/diseno/ppi', '/cuenta', '/privacidad', '/terminos', '/cookies']
 const BASE = `http://127.0.0.1:${PORT}`
 const SHOTS = process.argv.find(a => a.startsWith('--shots='))?.slice(8)
 if (SHOTS) mkdirSync(SHOTS, { recursive: true })

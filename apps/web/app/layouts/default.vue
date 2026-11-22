@@ -4,6 +4,7 @@ import { categories } from '@convertia/core'
 const route = useRoute()
 const { isDark, toggle } = useTheme()
 const isHome = computed(() => route.path === '/')
+const { enabled: accountsEnabled, user } = useAuth()
 </script>
 
 <template>
@@ -26,6 +27,19 @@ const isHome = computed(() => route.path === '/')
           class="flex-1"
         />
         <InstallButton />
+        <NuxtLink
+          v-if="accountsEnabled"
+          to="/cuenta"
+          class="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          :aria-label="user ? 'Mi cuenta (sesión iniciada)' : 'Mi cuenta'"
+        >
+          <AppIcon name="user" />
+          <span
+            v-if="user"
+            class="absolute top-1.5 right-1.5 size-2 rounded-full bg-brand-500 ring-2 ring-white dark:ring-slate-950"
+            aria-hidden="true"
+          />
+        </NuxtLink>
         <button
           type="button"
           class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -92,6 +106,28 @@ const isHome = computed(() => route.path === '/')
           >DolarApi</a>.
           Valores de referencia, sin garantía.
         </p>
+        <nav
+          aria-label="Legales"
+          class="mt-4 flex flex-wrap gap-x-4 gap-y-2"
+        >
+          <NuxtLink
+            to="/terminos"
+            class="hover:text-brand-700 dark:hover:text-brand-500"
+          >Términos</NuxtLink>
+          <NuxtLink
+            to="/privacidad"
+            class="hover:text-brand-700 dark:hover:text-brand-500"
+          >Privacidad</NuxtLink>
+          <NuxtLink
+            to="/cookies"
+            class="hover:text-brand-700 dark:hover:text-brand-500"
+          >Datos en tu navegador</NuxtLink>
+          <NuxtLink
+            v-if="accountsEnabled"
+            to="/cuenta"
+            class="hover:text-brand-700 dark:hover:text-brand-500"
+          >Mi cuenta</NuxtLink>
+        </nav>
       </div>
     </footer>
   </div>

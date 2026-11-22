@@ -24,11 +24,15 @@ const prerenderRoutes = [
   }),
   ...popularCurrencyPairs.map(([from, to]) => currencyPairPath(from, to)),
   ...tools.map(t => t.path),
+  '/terminos',
+  '/privacidad',
+  '/cookies',
+  '/cuenta',
 ]
 
 function sitemap(routes: string[]): string {
   const today = new Date().toISOString().slice(0, 10)
-  const urls = [...new Set(routes)].sort().map(r => `  <url><loc>${SITE_URL}${r === '/' ? '/' : r}</loc><lastmod>${today}</lastmod></url>`)
+  const urls = [...new Set(routes)].filter(r => r !== '/cuenta').sort().map(r => `  <url><loc>${SITE_URL}${r === '/' ? '/' : r}</loc><lastmod>${today}</lastmod></url>`)
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`
 }
 
@@ -105,6 +109,9 @@ export default defineNuxtConfig({
     public: {
       ratesUrl: '/api/v1/rates.json',
       siteUrl: SITE_URL,
+      // Cuentas (F3). Vacías = la app funciona igual, sin cuentas. Se fijan en el build (sitio estático).
+      supabaseUrl: '',
+      supabaseKey: '',
     },
   },
 
@@ -124,6 +131,8 @@ export default defineNuxtConfig({
 
   vite: {
     plugins: [tailwindcss()],
+    // DEBUG_HYDRATION=1 npm run build → Vue explica cada diferencia de hidratación también en producción.
+    define: { __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: process.env.DEBUG_HYDRATION === '1' },
   },
 
   hooks: {

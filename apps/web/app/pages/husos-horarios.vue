@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import { CITIES, formatOffset, parseISODate, wallTime, zonedToInstant, zoneOffsetMinutes } from '@convertia/core'
 
-const STORAGE_KEY = 'convertia:cities'
 const DEFAULT = ['Buenos Aires', 'Ciudad de México', 'Nueva York', 'Madrid', 'Londres', 'Tokio']
 
-const selected = ref<string[]>(DEFAULT)
+// Estado compartido: si llegan ajustes de la cuenta (useSync), la lista se actualiza sola.
+const saved = useState<string[] | null>('cities:selected', () => null)
+const selected = computed(() => (saved.value ?? DEFAULT).filter(n => CITIES.some(c => c.name === n)))
+
+/** Solo los cambios del usuario marcan los ajustes como modificados (y se sincronizan). */
+function setCities(list: string[]) {
+  saved.value = list
+  writeStorage(settingsStorage.CITIES_KEY, list)
+  touchSettings()
+}
+
 const now = ref<number>()
 let timer: ReturnType<typeof setInterval> | undefined
 
@@ -14,25 +23,26 @@ const date = ref('')
 const time = ref('10:00')
 
 onMounted(() => {
-  const saved = readStorage<string[]>(STORAGE_KEY, [])
-  if (saved.length && saved.every(n => CITIES.some(c => c.name === n))) selected.value = saved
+  if (saved.value === null) {
+    const stored = readStorage<string[]>(settingsStorage.CITIES_KEY, [])
+    if (stored.length) saved.value = stored
+  }
   now.value = Date.now()
   timer = setInterval(() => (now.value = Date.now()), 15000)
   date.value = todayISO()
 })
 onUnmounted(() => clearInterval(timer))
-watch(selected, v => writeStorage(STORAGE_KEY, v), { deep: true })
 
 const cityByName = (name: string) => CITIES.find(c => c.name === name)!
 const available = computed(() => CITIES.filter(c => !selected.value.includes(c.name)))
 const toAdd = ref('')
 watch(toAdd, (name) => {
   if (name) {
-    selected.value = [...selected.value, name]
+    setCities([...selected.value, name])
     toAdd.value = ''
   }
 })
-const remove = (name: string) => (selected.value = selected.value.filter(n => n !== name))
+const remove = (name: string) => setCities(selected.value.filter(n => n !== name))
 
 const hm = (w: { h: number, min: number }) => `${String(w.h).padStart(2, '0')}:${String(w.min).padStart(2, '0')}`
 const dayShort = (w: { y: number, m: number, d: number }) => new Date(Date.UTC(w.y, w.m - 1, w.d)).toLocaleDateString('es-AR', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' })

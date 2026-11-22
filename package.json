@@ -15,12 +15,16 @@
     "rates": "php rates/fetch.php --out=apps/web/public/api/v1",
     "serve": "node apps/web/scripts/serve-static.mjs",
     "e2e": "node apps/web/scripts/e2e-check.mjs",
+    "test:db": "node supabase/tests/rls.test.mjs",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
     "icons": "node apps/web/scripts/build-icons.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
-    "puppeteer-core": "^25.18.1"
+    "puppeteer-core": "^25.18.1",
+    "supabase": "^3.2.0"
   }
 }

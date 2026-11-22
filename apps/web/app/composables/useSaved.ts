@@ -1,3 +1,4 @@
+import { compactItems, mergeItems, upgradeLegacyItems, visibleItems, type SyncItem } from '@convertia/core'
 import { toast } from 'vue-sonner'
 
 export interface SavedConversion {
@@ -7,42 +8,70 @@ export interface SavedConversion {
   href: string
 }
 
+export type SavedListName = 'favorites' | 'recent'
+export const SAVED_LIMITS: Record<SavedListName, number> = { favorites: 50, recent: 12 }
+
 /**
- * Lista guardada en el dispositivo. Se carga después de montar, para que el HTML
- * prerenderizado y el primer render del navegador coincidan.
- * (En la F3 se sincroniza con la cuenta vía Supabase.)
+ * Lista guardada en el dispositivo, con fecha por ítem y lápidas para los borrados
+ * (ver core/sync.ts). Si hay sesión, useSync la combina con la cuenta.
  */
-function useSavedList(name: string, max: number) {
+export function useSavedStore(name: SavedListName) {
   const storageKey = `convertia:${name}`
-  const list = useState<SavedConversion[]>(`saved:${name}`, () => [])
+  const max = SAVED_LIMITS[name]
+  const items = useState<SyncItem[]>(`saved:${name}`, () => [])
   const loaded = useState(`saved:${name}:loaded`, () => false)
 
-  onMounted(() => {
-    if (loaded.value) return
-    list.value = readStorage<SavedConversion[]>(storageKey, []).slice(0, max)
+  /** Se llama recién en el navegador, para que el HTML prerenderizado y el primer render coincidan. */
+  function ensureLoaded() {
+    if (loaded.value || import.meta.server) return
+    items.value = compactItems(upgradeLegacyItems(readStorage<unknown>(storageKey, [])), max)
     loaded.value = true
-  })
-
-  function set(items: SavedConversion[]) {
-    list.value = items.slice(0, max)
-    writeStorage(storageKey, list.value)
   }
 
-  return { list, set }
+  function set(next: SyncItem[], { sync = true } = {}) {
+    items.value = compactItems(next, max)
+    writeStorage(storageKey, items.value)
+    if (sync) useSync().requestSync()
+  }
+
+  const visible = computed(() => visibleItems(items.value, max))
+
+  return { items, visible, ensureLoaded, set, max }
+}
+
+function useSavedList(name: SavedListName) {
+  const store = useSavedStore(name)
+  onMounted(store.ensureLoaded)
+  const now = () => new Date().toISOString()
+
+  function upsert(item: SavedConversion) {
+    store.set(mergeItems([{ ...item, updatedAt: now() }], store.items.value))
+  }
+
+  function remove(key: string) {
+    store.set(store.items.value.map(i => i.key === key ? { ...i, deleted: true, updatedAt: now() } : i))
+  }
+
+  function clearAll() {
+    const t = now()
+    store.set(store.items.value.map(i => i.deleted ? i : { ...i, deleted: true, updatedAt: t }))
+  }
+
+  return { list: store.visible, upsert, remove, clearAll }
 }
 
 export function useFavorites() {
-  const { list, set } = useSavedList('favorites', 50)
+  const { list, upsert, remove } = useSavedList('favorites')
 
   const has = (key: string) => list.value.some(f => f.key === key)
 
   function toggle(item: SavedConversion) {
     if (has(item.key)) {
-      set(list.value.filter(f => f.key !== item.key))
+      remove(item.key)
       toast('Quitado de favoritos')
     }
     else {
-      set([item, ...list.value])
+      upsert(item)
       toast.success('Agregado a favoritos')
     }
   }
@@ -51,15 +80,6 @@ export function useFavorites() {
 }
 
 export function useRecent() {
-  const { list, set } = useSavedList('recent', 12)
-
-  function push(item: SavedConversion) {
-    set([item, ...list.value.filter(r => r.key !== item.key)])
-  }
-
-  function clear() {
-    set([])
-  }
-
-  return { recent: list, push, clear }
+  const { list, upsert, clearAll } = useSavedList('recent')
+  return { recent: list, push: upsert, clear: clearAll }
 }

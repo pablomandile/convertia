@@ -9,7 +9,9 @@ export function useTheme() {
   function toggle() {
     isDark.value = !isDark.value
     document.documentElement.classList.toggle('dark', isDark.value)
-    writeStorage('convertia:theme', isDark.value ? 'dark' : 'light')
+    // Texto plano, no JSON: el script del <head> compara contra 'dark'.
+    settingsStorage.writeTheme(isDark.value ? 'dark' : 'light')
+    touchSettings()
   }
 
   return { isDark, toggle }

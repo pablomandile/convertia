@@ -19,6 +19,7 @@ useHead({
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+    <CookieNotice />
     <Toaster
       position="bottom-center"
       :theme="isDark ? 'dark' : 'light'"
