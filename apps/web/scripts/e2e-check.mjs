@@ -18,7 +18,7 @@ import puppeteer from 'puppeteer-core'
 
 const PORT = 4199
 // Páginas de herramientas que se revisan en el chequeo de desborde (sumar las nuevas).
-const TOOL_PAGES = ['/numeros/romanos', '/numeros/bases', '/numeros/a-letras', '/dolar', '/inflacion', '/cuotas', '/plazo-fijo', '/iva']
+const TOOL_PAGES = ['/numeros/romanos', '/numeros/bases', '/numeros/a-letras', '/dolar', '/inflacion', '/cuotas', '/plazo-fijo', '/iva', '/cocina', '/cocina/horno', '/cocina/escalar-receta']
 const BASE = `http://127.0.0.1:${PORT}`
 const SHOTS = process.argv.find(a => a.startsWith('--shots='))?.slice(8)
 if (SHOTS) mkdirSync(SHOTS, { recursive: true })
@@ -143,6 +143,12 @@ try {
   // El veredicto depende de la inflación del mes: se chequea que haya uno y que use la sugerida del IPC.
   const cuotasText = await page.evaluate(() => document.body.textContent)
   check('cuotas: veredicto con la inflación del IPC', /Conviene (en cuotas|de contado)|Da lo mismo/.test(cuotasText) && /Sugerida: promedio/.test(cuotasText), cuotasText.match(/Conviene [a-z ]+|Da lo mismo/)?.[0])
+  await page.goto(`${BASE}/cocina`, { waitUntil: 'networkidle0' })
+  check('cocina: 1 taza de harina = 133 g', (await outputs()).includes('133'), (await outputs()).join(' | '))
+  await page.goto(`${BASE}/cocina/horno`, { waitUntil: 'networkidle0' })
+  check('horno: 180 °C = 356 °F, gas 4', (await outputs()).includes('356 °F') && (await outputs()).includes('4'))
+  await page.goto(`${BASE}/cocina/escalar-receta`, { waitUntil: 'networkidle0' })
+  check('escalar receta: 4 → 6 porciones', (await outputs()).some(o => o.includes('375 g de harina') && o.includes('3 huevos') && o.includes('180 °C')))
   const sitemapXml = await (await fetch(`${BASE}/sitemap.xml`)).text()
   check('sitemap.xml lista categorías y herramientas', sitemapXml.includes('/longitud/pies-a-metros</loc>') && sitemapXml.includes('/numeros/romanos</loc>'))
 

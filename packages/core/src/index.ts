@@ -16,3 +16,7 @@ export {
   indexAt, inflationRates, presentValueOfInstallments, realReturnPct, removeVat, VAT_RATES,
 } from './tools/dinero'
 export type { IndexSeries } from './tools/dinero'
+export {
+  convertIngredient, formatQuantity, INGREDIENTS, KITCHEN_MEASURES, oven, OVEN_TABLE, ovenLabel, parseQuantity, scaleRecipe,
+} from './tools/cocina'
+export type { Ingredient, KitchenMeasure } from './tools/cocina'
