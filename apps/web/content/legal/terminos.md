@@ -8,7 +8,8 @@ Convertia es una herramienta gratuita para convertir unidades y monedas y hacer 
 
 **Los resultados son orientativos.** Revisalos antes de tomar una decisión importante.
 
-- **Las cotizaciones son de referencia.** Salen de fuentes públicas (ExchangeRate-API, CoinGecko, DolarApi), pueden tener demora y no son el precio de ningún banco ni casa de cambio.
+- **Las cotizaciones son de referencia.** Salen de fuentes públicas (ExchangeRate-API, CoinGecko, DolarApi, ArgentinaDatos y Frankfurter), pueden tener demora y no son el precio de ningún banco ni casa de cambio. El oro y la plata se toman de tokens respaldados por una onza troy, como referencia del precio internacional.
+- **Los días hábiles** descuentan los feriados nacionales publicados, no los provinciales ni los locales.
 - **Las calculadoras de dinero son estimaciones**, no asesoramiento financiero, contable ni impositivo. La inflación futura no se conoce y los cálculos no incluyen todos los costos (impuestos, comisiones, seguros).
 - **Los talles y las medidas de cocina son aproximados.** Cada marca y cada ingrediente varían.
 

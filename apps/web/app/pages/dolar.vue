@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { parseNumber } from '@convertia/core'
+import { lastDays, parseNumber, seriesStats } from '@convertia/core'
 
 const { data, status, isOffline, load } = useRates()
 
@@ -34,6 +34,27 @@ const gap = computed(() => {
   const oficial = data.value?.ar?.dolares?.oficial?.venta
   const blue = data.value?.ar?.dolares?.blue?.venta
   return oficial && blue ? (blue / oficial - 1) * 100 : undefined
+})
+
+// --- Evolución (historia de ArgentinaDatos, vía el cron) ---
+const history = useHistory()
+onMounted(() => history.load('dolares'))
+const range = ref(365)
+const CHART: Array<{ casa: string, name: string, slot: 1 | 2 | 3 | 4 }> = [
+  { casa: 'oficial', name: 'Oficial', slot: 1 },
+  { casa: 'blue', name: 'Blue', slot: 2 },
+  { casa: 'bolsa', name: 'MEP', slot: 3 },
+  { casa: 'contadoconliqui', name: 'CCL', slot: 4 },
+]
+const chartSeries = computed(() => {
+  const s = history.files.value.dolares?.series
+  if (!s) return []
+  return CHART.filter(c => s[c.casa]?.length).map(c => ({ id: c.casa, name: c.name, slot: c.slot, points: lastDays(s[c.casa]!, range.value) }))
+})
+const pesosShort = (n: number) => `$ ${Math.round(n).toLocaleString('es-AR')}`
+const blueChange = computed(() => {
+  const blue = chartSeries.value.find(s => s.id === 'blue')
+  return blue ? seriesStats(blue.points) : undefined
 })
 
 const time = new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -155,6 +176,35 @@ const when = (iso: string) => {
           {{ conversion.note }}
         </p>
       </div>
+    </section>
+
+    <section v-if="chartSeries.length">
+      <div class="flex flex-wrap items-end justify-between gap-2">
+        <h2 class="text-lg font-semibold">
+          Evolución
+        </h2>
+        <RangePicker v-model="range" />
+      </div>
+      <p
+        v-if="blueChange"
+        class="mt-1 text-sm text-slate-600 dark:text-slate-400"
+      >
+        El blue {{ blueChange.changePct >= 0 ? 'subió' : 'bajó' }} <strong>{{ formatPct(Math.abs(blueChange.changePct), 1) }}</strong> en el período.
+      </p>
+      <div class="mt-3">
+        <LineChart
+          :series="chartSeries"
+          :format="pesosShort"
+          :label="`Evolución del dólar oficial, blue, MEP y CCL en los últimos ${range} días`"
+        />
+      </div>
+      <p class="mt-2 text-xs text-slate-500">
+        Precio de venta de cada día. Historia: <a
+          href="https://argentinadatos.com"
+          rel="noopener"
+          class="underline"
+        >ArgentinaDatos</a>.
+      </p>
     </section>
 
     <p class="text-sm text-slate-500">

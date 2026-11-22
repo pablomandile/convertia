@@ -11,6 +11,8 @@
  * Escribe:
  *   <out>/rates.json               cotizaciones actuales (unidades por 1 USD) + dólares AR
  *   <out>/ipc.json                 IPC mensual del INDEC (se renueva cada 12 h como máximo)
+ *   <out>/series/*.json            historia para los gráficos: dólares AR, monedas, cripto y metales (cada 12 h)
+ *   <out>/feriados.json            feriados nacionales del año anterior, el actual y el próximo (cada 12 h)
  *   <out>/history/AAAA-MM-DD.json  la última foto de cada día (para gráficos)
  *   <out>/.htaccess                CORS abierto y caché corta (API pública)
  *
@@ -94,7 +96,8 @@ function fetchFiat(): ?array
 /** Cripto — CoinGecko. Se guarda como unidades por 1 USD (1 / precio). */
 function fetchCrypto(): ?array
 {
-    $ids = ['bitcoin' => 'BTC', 'ethereum' => 'ETH', 'tether' => 'USDT', 'solana' => 'SOL', 'usd-coin' => 'USDC'];
+    // pax-gold y kinesis-silver: tokens respaldados 1:1 por una onza troy de oro y de plata (referencia de precio).
+    $ids = ['bitcoin' => 'BTC', 'ethereum' => 'ETH', 'tether' => 'USDT', 'solana' => 'SOL', 'usd-coin' => 'USDC', 'pax-gold' => 'XAU', 'kinesis-silver' => 'XAG'];
     $data = fetchJson('https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&ids=' . implode(',', array_keys($ids)));
     if (!$data) {
         return null;
@@ -172,6 +175,111 @@ function fetchIpc(string $path): ?array
     ];
 }
 
+/** ¿Hace falta renovar este archivo? (no existe o tiene más de $hours horas) */
+function stale(string $path, int $hours = 12): bool
+{
+    return !is_file($path) || time() - filemtime($path) >= $hours * 3600;
+}
+
+/** Dólares de Argentina, últimos 2 años (venta diaria) — ArgentinaDatos. Para los gráficos de /dolar y USD/ARS. */
+function fetchArHistory(): ?array
+{
+    $since = gmdate('Y-m-d', strtotime('-730 days'));
+    $series = [];
+    foreach (['oficial', 'blue', 'bolsa', 'contadoconliqui'] as $casa) {
+        $rows = fetchJson("https://api.argentinadatos.com/v1/cotizaciones/dolares/$casa");
+        if (!is_array($rows) || !array_is_list($rows)) {
+            continue;
+        }
+        $points = [];
+        foreach ($rows as $row) {
+            $fecha = (string) ($row['fecha'] ?? '');
+            if ($fecha >= $since && is_numeric($row['venta'] ?? null)) {
+                $points[] = [$fecha, (float) $row['venta']];
+            }
+        }
+        if (count($points) > 30) {
+            $series[$casa] = $points;
+        }
+    }
+    if (!isset($series['oficial'])) {
+        logLine('Historia de dólares incompleta');
+        return null;
+    }
+    return ['updatedAt' => gmdate('c'), 'unit' => 'ARS por USD (venta)', 'series' => $series, 'source' => ['provider' => 'ArgentinaDatos', 'url' => 'https://argentinadatos.com']];
+}
+
+/** Monedas principales contra el USD, último año — Frankfurter (tipos de referencia del Banco Central Europeo). */
+function fetchFiatHistory(): ?array
+{
+    $since = gmdate('Y-m-d', strtotime('-365 days'));
+    $symbols = 'EUR,BRL,MXN,GBP,JPY,CNY,CHF,CAD,AUD';
+    $data = fetchJson("https://api.frankfurter.dev/v1/$since..?base=USD&symbols=$symbols");
+    if (!is_array($data['rates'] ?? null) || count($data['rates']) < 100) {
+        logLine('Historia de monedas incompleta');
+        return null;
+    }
+    $series = [];
+    foreach ($data['rates'] as $fecha => $rates) {
+        foreach ($rates as $code => $value) {
+            if (is_numeric($value) && $value > 0) {
+                $series[$code][] = [(string) $fecha, (float) $value];
+            }
+        }
+    }
+    return ['updatedAt' => gmdate('c'), 'unit' => 'unidades por 1 USD', 'series' => $series, 'source' => ['provider' => 'Frankfurter (Banco Central Europeo)', 'url' => 'https://frankfurter.dev']];
+}
+
+/** Cripto, oro y plata, último año (precio en USD) — CoinGecko. Oro y plata, vía tokens respaldados 1:1 por una onza. */
+function fetchCryptoHistory(): ?array
+{
+    $ids = ['bitcoin' => 'BTC', 'ethereum' => 'ETH', 'pax-gold' => 'XAU', 'kinesis-silver' => 'XAG'];
+    $series = [];
+    foreach ($ids as $id => $code) {
+        $data = fetchJson("https://api.coingecko.com/api/v3/coins/$id/market_chart?vs_currency=usd&days=365&interval=daily");
+        $prices = $data['prices'] ?? null;
+        if (is_array($prices) && count($prices) > 100) {
+            foreach ($prices as [$ms, $price]) {
+                if (is_numeric($price) && $price > 0) {
+                    $series[$code][gmdate('Y-m-d', (int) ($ms / 1000))] = (float) $price;
+                }
+            }
+            $series[$code] = array_map(fn ($d, $v) => [$d, $v], array_keys($series[$code]), array_values($series[$code]));
+        }
+        sleep(3); // límite de pedidos de la API gratuita
+    }
+    if (!isset($series['BTC'])) {
+        logLine('Historia de cripto incompleta');
+        return null;
+    }
+    return ['updatedAt' => gmdate('c'), 'unit' => 'USD por unidad', 'series' => $series, 'source' => ['provider' => 'CoinGecko', 'url' => 'https://www.coingecko.com']];
+}
+
+/** Feriados nacionales del año anterior, el actual y el próximo — ArgentinaDatos. Para los días hábiles. */
+function fetchFeriados(): ?array
+{
+    $year = (int) gmdate('Y');
+    $feriados = [];
+    $years = [];
+    foreach ([$year - 1, $year, $year + 1] as $y) {
+        $rows = fetchJson("https://api.argentinadatos.com/v1/feriados/$y");
+        if (!is_array($rows) || !array_is_list($rows) || !$rows) {
+            continue;
+        }
+        $years[] = $y;
+        foreach ($rows as $row) {
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($row['fecha'] ?? ''))) {
+                $feriados[] = ['fecha' => $row['fecha'], 'nombre' => (string) ($row['nombre'] ?? ''), 'tipo' => (string) ($row['tipo'] ?? '')];
+            }
+        }
+    }
+    if (!in_array($year, $years, true)) {
+        logLine('Feriados del año actual no disponibles');
+        return null;
+    }
+    return ['updatedAt' => gmdate('c'), 'years' => $years, 'feriados' => $feriados, 'source' => ['provider' => 'ArgentinaDatos', 'url' => 'https://argentinadatos.com']];
+}
+
 function writeAtomic(string $path, string $contents): void
 {
     $tmp = $path . '.tmp-' . getmypid();
@@ -239,10 +347,30 @@ $json = json_encode($output, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | J
 $ipcPath = "$outDir/ipc.json";
 $ipc = fetchIpc($ipcPath);
 
+// Series históricas y feriados: cambian una vez por día, se renuevan como mucho cada 12 h.
+// Si una fuente falla, el archivo anterior queda como está.
+$extras = [
+    "$outDir/series/dolares.json" => 'fetchArHistory',
+    "$outDir/series/monedas.json" => 'fetchFiatHistory',
+    "$outDir/series/cripto.json" => 'fetchCryptoHistory',
+    "$outDir/feriados.json" => 'fetchFeriados',
+];
+if (!is_dir("$outDir/series")) {
+    mkdir("$outDir/series", 0755, true);
+}
+
 try {
     writeAtomic($ratesPath, $json);
     if ($ipc) {
         writeAtomic($ipcPath, json_encode($ipc, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
+    }
+    foreach ($extras as $path => $fetch) {
+        if (stale($path)) {
+            $result = $fetch();
+            if ($result) {
+                writeAtomic($path, json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
+            }
+        }
     }
     writeAtomic("$outDir/history/" . gmdate('Y-m-d') . '.json', $json);
 

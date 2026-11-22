@@ -15,6 +15,7 @@ export const popularCurrencyPairs: Array<[string, string]> = [
   ['BTC', 'USD'],
   ['ETH', 'USD'],
   ['BTC', 'ARS'],
+  ['XAU', 'USD'],
 ]
 
 /** Monedas que van primero en los selectores. */

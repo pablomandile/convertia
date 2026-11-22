@@ -32,5 +32,7 @@ export {
   screenDensity, toHex, wcag,
 } from './tools/diseno'
 export type { CssUnit, RGBA } from './tools/diseno'
+export { lastDays, monthlyLast, niceTicks, pairSeries, seriesStats } from './series'
+export type { HistorySources, Series } from './series'
 export { compactItems, itemsToPush, mergeItems, mergeSettings, TOMBSTONE_DAYS, upgradeLegacyItems, visibleItems } from './sync'
 export type { SyncItem } from './sync'

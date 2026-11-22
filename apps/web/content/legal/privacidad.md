@@ -10,7 +10,7 @@ Convertia es un proyecto de **Pablo Mandile**, en Argentina. Para cualquier cons
 
 - **Las conversiones y los cálculos se hacen en tu dispositivo.** Los valores que escribís (montos, medidas, fechas, recetas) no se envían a ningún lado.
 - Tus favoritos, tus conversiones recientes, tus ajustes y las últimas cotizaciones se guardan **en tu navegador**, para que la app funcione sin conexión. El detalle está en [Datos guardados en tu navegador](/cookies).
-- Las cotizaciones y el IPC los busca nuestro propio servidor en las fuentes (ExchangeRate-API, CoinGecko, DolarApi y datos.gob.ar). Tu navegador no se conecta con esas fuentes.
+- Las cotizaciones, su historia, el IPC y los feriados los busca nuestro propio servidor en las fuentes (ExchangeRate-API, CoinGecko, DolarApi, ArgentinaDatos, Frankfurter y datos.gob.ar). Tu navegador no se conecta con esas fuentes.
 - Como cualquier sitio web, el servidor donde está alojada Convertia (Hostinger) registra datos técnicos de cada visita: la dirección IP, el navegador, la página pedida y la hora. Los usa para funcionar y para defenderse de abusos.
 
 ## Si creás una cuenta

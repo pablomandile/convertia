@@ -98,12 +98,22 @@ const { enabled: accountsEnabled, user } = useAuth()
             href="https://www.coingecko.com"
             rel="noopener"
             class="underline"
-          >CoinGecko</a> y
+          >CoinGecko</a>,
           <a
             href="https://dolarapi.com"
             rel="noopener"
             class="underline"
-          >DolarApi</a>.
+          >DolarApi</a>,
+          <a
+            href="https://argentinadatos.com"
+            rel="noopener"
+            class="underline"
+          >ArgentinaDatos</a> y
+          <a
+            href="https://frankfurter.dev"
+            rel="noopener"
+            class="underline"
+          >Frankfurter</a> (BCE).
           Valores de referencia, sin garantía.
         </p>
         <nav

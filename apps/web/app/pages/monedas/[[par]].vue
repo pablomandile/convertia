@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { convertCurrency, currencyName, parseNumber, type Decimal } from '@convertia/core'
+import { convertCurrency, currencyName, lastDays, pairSeries, parseNumber, seriesStats, type Decimal } from '@convertia/core'
 
 definePageMeta({ key: 'monedas' })
 
@@ -8,6 +8,7 @@ const router = useRouter()
 const { data, rates, status, isOffline, updatedAt, load } = useRates()
 
 const CRYPTO = new Set(['BTC', 'ETH', 'USDT', 'USDC', 'SOL'])
+const METALS = new Set(['XAU', 'XAG'])
 
 function pairFromRoute() {
   const par = route.params.par ? String(route.params.par) : ''
@@ -63,8 +64,9 @@ const options = computed(() => {
   const rest = [...set].filter(c => !featuredCurrencies.includes(c))
   return [
     ...featured.map(c => ({ value: c, label: label(c), group: 'Más usadas' })),
-    ...rest.filter(c => !CRYPTO.has(c)).sort((a, b) => currencyName(a).localeCompare(currencyName(b), 'es')).map(c => ({ value: c, label: label(c), group: 'Todas las monedas' })),
+    ...rest.filter(c => !CRYPTO.has(c) && !METALS.has(c)).sort((a, b) => currencyName(a).localeCompare(currencyName(b), 'es')).map(c => ({ value: c, label: label(c), group: 'Todas las monedas' })),
     ...rest.filter(c => CRYPTO.has(c)).map(c => ({ value: c, label: label(c), group: 'Cripto' })),
+    ...rest.filter(c => METALS.has(c)).map(c => ({ value: c, label: label(c), group: 'Metales' })),
   ]
 })
 
@@ -102,6 +104,28 @@ const dolares = computed(() => {
   return AR_ORDER.filter(k => d[k]).map(k => ({ casa: k, ...d[k]! }))
 })
 const ars = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 })
+
+// --- Evolución del par (si hay historia de las dos monedas) ---------------
+const history = useHistory()
+onMounted(() => Promise.all([history.load('dolares'), history.load('monedas'), history.load('cripto')]))
+const range = ref(365)
+const pair = computed(() => pairSeries(from.value, to.value, history.sources.value))
+const chartSeries = computed(() => pair.value?.length ? [{ id: 'par', name: `${from.value} en ${to.value}`, slot: 1 as const, points: lastDays(pair.value, range.value) }] : [])
+const pairStats = computed(() => chartSeries.value[0] ? seriesStats(chartSeries.value[0].points) : undefined)
+const maxDays = computed(() => pair.value?.length ? (Date.parse(pair.value.at(-1)![0]) - Date.parse(pair.value[0]![0])) / 86400000 : 0)
+function chartFormat(n: number) {
+  const abs = Math.abs(n)
+  const digits = abs >= 1000 ? 0 : abs >= 10 ? 2 : abs >= 0.01 ? 4 : 8
+  return n.toLocaleString('es-AR', { maximumFractionDigits: digits })
+}
+const historySource = computed(() => {
+  const codes = [from.value, to.value]
+  const names = new Set<string>()
+  if (codes.includes('ARS')) names.add('ArgentinaDatos (dólar oficial)')
+  if (codes.some(c => history.files.value.monedas?.series[c])) names.add('Frankfurter (Banco Central Europeo)')
+  if (codes.some(c => history.files.value.cripto?.series[c])) names.add('CoinGecko')
+  return [...names].join(', ')
+})
 
 // --- Recientes y favoritos -------------------------------------------------
 const { push } = useRecent()
@@ -204,6 +228,38 @@ useSeoMeta({ title, description, ogTitle: title, ogDescription: description })
       </div>
       <p class="mt-2 text-xs text-slate-500">
         Precio de venta. El conversor usa el tipo de cambio de referencia internacional.
+      </p>
+    </section>
+
+    <section v-if="chartSeries.length">
+      <div class="flex flex-wrap items-end justify-between gap-2">
+        <h2 class="text-lg font-semibold">
+          Evolución de 1 {{ from }} en {{ to }}
+        </h2>
+        <RangePicker
+          v-model="range"
+          :max="maxDays"
+        />
+      </div>
+      <p
+        v-if="pairStats"
+        class="mt-1 text-sm text-slate-600 dark:text-slate-400"
+      >
+        {{ pairStats.changePct >= 0 ? 'Subió' : 'Bajó' }} <strong>{{ formatPct(Math.abs(pairStats.changePct), 1) }}</strong> en el período
+        (mínimo {{ chartFormat(pairStats.min) }}, máximo {{ chartFormat(pairStats.max) }}).
+      </p>
+      <div class="mt-3">
+        <LineChart
+          :series="chartSeries"
+          :format="chartFormat"
+          :label="`Evolución de 1 ${from} en ${to}`"
+        />
+      </div>
+      <p class="mt-2 text-xs text-slate-500">
+        Historia diaria: {{ historySource }}.
+        <template v-if="[from, to].some(c => c === 'XAU' || c === 'XAG')">
+          Oro y plata: precio de referencia de tokens respaldados por una onza troy (PAX Gold y Kinesis Silver).
+        </template>
       </p>
     </section>
 

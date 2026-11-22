@@ -33,7 +33,7 @@ export function weekday(date: CalendarDate): number {
 }
 
 /** Diferencia de calendario: años, meses y días, más totales. Siempre en positivo (`negative` indica el orden). */
-export function dateDiff(fromDate: CalendarDate, toDate: CalendarDate) {
+export function dateDiff(fromDate: CalendarDate, toDate: CalendarDate, holidays?: ReadonlySet<string>) {
   const negative = compare(toDate, fromDate) < 0
   const [a, b] = negative ? [toDate, fromDate] : [fromDate, toDate]
   // Meses enteros que entran (31/1 + 1 mes = 29/2), y los días que sobran.
@@ -51,19 +51,21 @@ export function dateDiff(fromDate: CalendarDate, toDate: CalendarDate) {
     totalDays,
     totalWeeks: Math.floor(totalDays / 7),
     totalMonths,
-    businessDays: businessDaysBetween(a, b),
+    businessDays: businessDaysBetween(a, b, holidays),
   }
 }
 
-/** Días de lunes a viernes en [desde, hasta) (sin contar feriados). */
-export function businessDaysBetween(from: CalendarDate, to: CalendarDate): number {
+/** Días de lunes a viernes en [desde, hasta), descontando los feriados dados ("AAAA-MM-DD"). */
+export function businessDaysBetween(from: CalendarDate, to: CalendarDate, holidays?: ReadonlySet<string>): number {
   const start = dayNumber(from)
   const end = dayNumber(to)
   let count = 0
   // 1970-01-01 fue jueves (4).
   for (let n = start; n < end; n++) {
     const wd = ((n % 7) + 7 + 4) % 7
-    if (wd !== 0 && wd !== 6) count++
+    if (wd === 0 || wd === 6) continue
+    if (holidays?.size && holidays.has(new Date(n * 86400000).toISOString().slice(0, 10))) continue
+    count++
   }
   return count
 }

@@ -185,6 +185,44 @@ try {
   check('px a rem: 24px = 1.5rem', (await outputs()).includes('1.5rem'), (await outputs()).join(' | '))
   await page.goto(`${BASE}/diseno/ppi`, { waitUntil: 'networkidle0' })
   check('PPI: Full HD 24″ = 91,8', (await outputs()).includes('91,8 PPI'), (await outputs()).join(' | '))
+  // Gráficos y feriados (la historia la escribe el cron: npm run rates)
+  await page.goto(`${BASE}/dolar`, { waitUntil: 'networkidle0' })
+  await page.waitForSelector('svg[role="img"] path', { timeout: 8000 }).catch(() => {})
+  check('dólar: gráfico con las 4 cotizaciones', (await page.$$('svg[role="img"] path[stroke-width="2"]')).length === 4)
+  await page.$eval('svg[role="img"]', el => el.scrollIntoView({ block: 'center' }))
+  const svgBox = await (await page.$('svg[role="img"]')).boundingBox()
+  await page.mouse.move(svgBox.x + svgBox.width * 0.5, svgBox.y + svgBox.height * 0.5)
+  await page.waitForFunction(() => document.querySelectorAll('svg[role="img"] circle').length === 4, { timeout: 3000 }).catch(() => {})
+  const tooltip = await page.evaluate(() => document.querySelector('.viz .pointer-events-none')?.textContent.replace(/\s+/g, ' ').trim())
+  check('dólar: al pasar el puntero, cruz y tooltip con los 4 valores', /Oficial.*Blue.*MEP.*CCL/.test(tooltip ?? ''), tooltip)
+  const svgWidth = svgBox.width
+  const overflowsX = await page.evaluate(w => [...document.querySelectorAll('svg[role="img"] text')].some((t) => {
+    const b = t.getBBox()
+    return b.x < 0 || b.x + b.width > w + 1
+  }), svgWidth)
+  check('dólar: ninguna etiqueta del gráfico se sale del borde', !overflowsX)
+  await page.click('.viz button[aria-expanded]')
+  check('dólar: vista en tabla', (await page.$$('.viz table tbody tr')).length >= 10)
+  await page.goto(`${BASE}/monedas/usd-a-eur`, { waitUntil: 'networkidle0' })
+  await page.waitForSelector('svg[role="img"] path', { timeout: 8000 }).catch(() => {})
+  check('monedas: gráfico de USD en EUR', (await page.$$('svg[role="img"] path[stroke-width="2"]')).length === 1)
+  await page.goto(`${BASE}/monedas/xau-a-usd`, { waitUntil: 'networkidle0' })
+  await page.waitForFunction(() => !/Cargando/.test(document.querySelector('output')?.textContent ?? 'Cargando'), { timeout: 8000 }).catch(() => {})
+  check('oro: 1 XAU en USD', /^[\d.]+,\d{2}$/.test((await outputs())[0] ?? ''), (await outputs())[0])
+  await page.goto(`${BASE}/fechas/diferencia`, { waitUntil: 'networkidle0' })
+  await page.evaluate(() => {
+    const [a, b] = document.querySelectorAll('input[type="date"]')
+    const set = (el, v) => {
+      el.value = v
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+    set(a, '2026-05-18')
+    set(b, '2026-05-30') // semana con el 25 de mayo (lunes): 9 hábiles, no 10
+  })
+  await page.waitForFunction(() => /Se descontaron/.test(document.body.textContent), { timeout: 8000 }).catch(() => {})
+  const habiles = await page.evaluate(() => [...document.querySelectorAll('dl div')].find(d => d.textContent.includes('Días hábiles'))?.querySelector('dd')?.textContent.trim())
+  check('días hábiles descuentan el 25 de mayo', habiles === '9', habiles)
+
   const sitemapXml = await (await fetch(`${BASE}/sitemap.xml`)).text()
   check('sitemap.xml lista categorías y herramientas', sitemapXml.includes('/longitud/pies-a-metros</loc>') && sitemapXml.includes('/numeros/romanos</loc>'))
 
