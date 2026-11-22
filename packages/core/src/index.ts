@@ -20,3 +20,8 @@ export {
   convertIngredient, formatQuantity, INGREDIENTS, KITCHEN_MEASURES, oven, OVEN_TABLE, ovenLabel, parseQuantity, scaleRecipe,
 } from './tools/cocina'
 export type { Ingredient, KitchenMeasure } from './tools/cocina'
+export {
+  addDays, addMonths, age, businessDaysBetween, CITIES, dateDiff, daysInMonth, formatOffset, fromUnix, parseISODate,
+  toISODate, wallTime, weekday, zonedToInstant, zoneOffsetMinutes,
+} from './tools/fechas'
+export type { CalendarDate, City } from './tools/fechas'
