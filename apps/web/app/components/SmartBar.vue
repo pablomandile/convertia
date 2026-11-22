@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { convert, convertCurrency, parseQuery } from '@convertia/core'
+import { convert, convertCurrency, fromRoman, parseQuery } from '@convertia/core'
 
 const props = defineProps<{ compact?: boolean }>()
 
@@ -11,7 +11,18 @@ interface Outcome { text: string, href: string, pending?: boolean }
 
 const outcome = computed<Outcome | null>(() => {
   const parsed = parseQuery(query.value, { rates: rates.value })
-  if (!parsed) return null
+  if (!parsed) {
+    // ¿Un número romano? (al menos 2 letras, para no confundir "m" o "l" sueltas).
+    const text = query.value.trim()
+    if (/^[MDCLXVI]{2,}$/i.test(text)) {
+      try {
+        // Sin separador de miles: los romanos llegan a 3999 y suelen ser años ("2026", no "2.026").
+        return { text: `${text.toUpperCase()} = ${fromRoman(text)}`, href: '/numeros/romanos' }
+      }
+      catch { /* no es un romano válido */ }
+    }
+    return null
+  }
   // "5 ft 10 in" da 5,8333…: para la URL alcanza con 10 cifras significativas.
   const value = parsed.value.toSignificantDigits(10).toString()
 
@@ -43,9 +54,13 @@ const outcome = computed<Outcome | null>(() => {
   }
 })
 
+// Si no es una conversión, ¿es el nombre de una herramienta? ("iva", "dólar blue", "cheque")
+const suggestions = computed(() => outcome.value ? [] : searchTools(query.value))
+
 async function submit() {
-  if (!outcome.value) return
-  await navigateTo(outcome.value.href)
+  const href = outcome.value?.href ?? suggestions.value[0]?.path
+  if (!href) return
+  await navigateTo(href)
   if (props.compact) {
     query.value = ''
     input.value?.blur()
@@ -131,6 +146,31 @@ function pickExample(example: string) {
           class="text-brand-600"
         />
       </NuxtLink>
+      <ul
+        v-else-if="suggestions.length"
+        class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900"
+        aria-label="Herramientas sugeridas"
+      >
+        <li
+          v-for="t in suggestions"
+          :key="t.path"
+        >
+          <NuxtLink
+            :to="t.path"
+            class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800"
+            @click="props.compact && (query = '')"
+          >
+            <span aria-hidden="true">{{ t.emoji }}</span>
+            <span class="min-w-0">
+              <span class="block font-medium">{{ t.name }}</span>
+              <span
+                v-if="!props.compact"
+                class="block truncate text-sm text-slate-500"
+              >{{ t.description }}</span>
+            </span>
+          </NuxtLink>
+        </li>
+      </ul>
       <p
         v-else
         class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900"

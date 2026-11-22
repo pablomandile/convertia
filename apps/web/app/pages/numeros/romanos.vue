@@ -9,7 +9,7 @@ const result = computed<{ ok: true, label: string, value: string } | { ok: false
   if (!text) return null
   try {
     if (/^\d+$/.test(text)) return { ok: true, label: 'En números romanos', value: toRoman(Number(text)) }
-    return { ok: true, label: 'En números arábigos', value: fromRoman(text).toLocaleString('es-AR') }
+    return { ok: true, label: 'En números arábigos', value: String(fromRoman(text)) }
   }
   catch (error) {
     return { ok: false, error: (error as Error).message }
@@ -61,7 +61,7 @@ const table = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 40, 50, 90, 100, 400, 500, 900
           :key="row.n"
           class="flex items-baseline justify-between rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-800"
         >
-          <span class="text-slate-500 tabular-nums">{{ row.n.toLocaleString('es-AR') }}</span>
+          <span class="text-slate-500 tabular-nums">{{ row.n }}</span>
           <span class="font-semibold">{{ row.r }}</span>
         </div>
       </div>

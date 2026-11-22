@@ -90,6 +90,19 @@ try {
   await page.waitForFunction(() => location.pathname === '/longitud/pies-a-centimetros', { timeout: 5000 })
   check('Enter navega al par', true, await page.evaluate(() => location.pathname + location.search))
 
+  // Barra inteligente: herramientas y romanos
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle0' })
+  await page.type('#smartbar', 'dolar blue')
+  await page.waitForSelector('[aria-label="Herramientas sugeridas"] a', { timeout: 5000 })
+  check('barra: «dolar blue» sugiere /dolar', await page.$eval('[aria-label="Herramientas sugeridas"] a', a => a.getAttribute('href')) === '/dolar')
+  await page.keyboard.press('Enter')
+  await page.waitForFunction(() => location.pathname === '/dolar', { timeout: 5000 })
+  check('barra: Enter abre la herramienta sugerida', true)
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle0' })
+  await page.type('#smartbar', 'mmxxvi')
+  await page.waitForFunction(() => document.querySelector('#smartbar-result')?.textContent.includes('MMXXVI = 2026'), { timeout: 5000 })
+  check('barra: «mmxxvi» = 2026', true)
+
   // 3. Página prerenderizada
   await page.goto(`${BASE}/longitud/pies-a-metros`, { waitUntil: 'networkidle0' })
   check('pies a metros = 0,3048', (await text('output')) === '0,3048', await text('output'))
