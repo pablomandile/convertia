@@ -11,3 +11,8 @@ export type { ParseResult } from './parse'
 export { convertCurrency, currencyAliases, currencyName, resolveCurrency } from './currency'
 export type { Rates } from './currency'
 export { amountToWords, formatInBase, fromRoman, groupDigits, integerToWords, parseInBase, toRoman } from './tools/numeros'
+export {
+  addVat, adjustForInflation, averageMonthlyInflation, compareInstallments, fixedTermDeposit, impliedMonthlyRate,
+  indexAt, inflationRates, presentValueOfInstallments, realReturnPct, removeVat, VAT_RATES,
+} from './tools/dinero'
+export type { IndexSeries } from './tools/dinero'

@@ -21,6 +21,11 @@ export interface ToolDef {
 }
 
 export const tools: ToolDef[] = [
+  { path: '/dolar', name: 'Dólar hoy en Argentina', description: 'Oficial, blue, MEP, CCL, tarjeta y cripto, con conversor.', emoji: '💵', group: 'dinero' },
+  { path: '/inflacion', name: 'Calculadora de inflación', description: '¿Cuánto valen hoy $10.000 de 2019? Con el IPC del INDEC.', emoji: '📈', group: 'dinero' },
+  { path: '/cuotas', name: 'Cuotas o contado', description: 'Qué conviene, teniendo en cuenta la inflación.', emoji: '💳', group: 'dinero' },
+  { path: '/plazo-fijo', name: 'Plazo fijo', description: 'Interés, TEA y si le gana a la inflación.', emoji: '🏦', group: 'dinero' },
+  { path: '/iva', name: 'Calculadora de IVA', description: 'Sumar o quitar IVA: 21 %, 10,5 %, 27 % y más.', emoji: '🧾', group: 'dinero' },
   { path: '/numeros/romanos', name: 'Números romanos', description: 'De números a romanos y de romanos a números.', emoji: '🏛️', group: 'numeros' },
   { path: '/numeros/bases', name: 'Binario, hexadecimal y bases', description: 'Decimal, binario, octal, hexadecimal y cualquier base de 2 a 36.', emoji: '🔢', group: 'numeros' },
   { path: '/numeros/a-letras', name: 'Número a letras', description: 'Montos en letras para cheques, recibos y facturas.', emoji: '✍️', group: 'numeros' },

@@ -28,6 +28,20 @@ export function formatMoney(value: Decimal): string {
   return money.format(Number(value.toFixed(2)))
 }
 
+const pesos = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+/** $ 1.234,56 */
+export function formatPesos(n: number): string {
+  return Number.isFinite(n) ? pesos.format(n) : '—'
+}
+
+/** 3,25 % (con signo opcional: +3,25 %) */
+export function formatPct(n: number | undefined, digits = 2, signed = false): string {
+  if (n === undefined || !Number.isFinite(n)) return '—'
+  const text = n.toLocaleString('es-AR', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+  return `${signed && n > 0 ? '+' : ''}${text} %`
+}
+
 /** Valor para poner en la URL (?v=): con punto decimal, sin separadores. */
 export function toQueryValue(value: Decimal | string): string {
   return typeof value === 'string' ? value : value.toString()

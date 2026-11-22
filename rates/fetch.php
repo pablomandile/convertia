@@ -10,6 +10,7 @@
  *
  * Escribe:
  *   <out>/rates.json               cotizaciones actuales (unidades por 1 USD) + dólares AR
+ *   <out>/ipc.json                 IPC mensual del INDEC (se renueva cada 12 h como máximo)
  *   <out>/history/AAAA-MM-DD.json  la última foto de cada día (para gráficos)
  *   <out>/.htaccess                CORS abierto y caché corta (API pública)
  *
@@ -142,6 +143,35 @@ function fetchArgentina(): ?array
     ];
 }
 
+/**
+ * IPC Nacional (INDEC, base dic-2016 = 100) — API de series de tiempo de datos.gob.ar.
+ * Sale una vez por mes: se baja como mucho cada 12 horas.
+ */
+function fetchIpc(string $path): ?array
+{
+    if (is_file($path) && time() - filemtime($path) < 12 * 3600) {
+        return null; // reciente: no hace falta
+    }
+    $data = fetchJson('https://apis.datos.gob.ar/series/api/series/?ids=148.3_INIVELNAL_DICI_M_26&format=json&limit=1000&sort=asc&metadata=none');
+    $rows = $data['data'] ?? null;
+    if (!is_array($rows) || count($rows) < 100) {
+        logLine('Serie de IPC incompleta');
+        return null;
+    }
+    $serie = [];
+    foreach ($rows as $row) {
+        if (isset($row[0], $row[1]) && is_numeric($row[1])) {
+            $serie[] = [substr((string) $row[0], 0, 7), (float) $row[1]];
+        }
+    }
+    return [
+        'updatedAt' => gmdate('c'),
+        'base' => '2016-12',
+        'serie' => $serie,
+        'source' => ['provider' => 'INDEC vía datos.gob.ar', 'url' => 'https://datos.gob.ar/series/api/series/?ids=148.3_INIVELNAL_DICI_M_26'],
+    ];
+}
+
 function writeAtomic(string $path, string $contents): void
 {
     $tmp = $path . '.tmp-' . getmypid();
@@ -206,8 +236,14 @@ $output = [
 
 $json = json_encode($output, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
 
+$ipcPath = "$outDir/ipc.json";
+$ipc = fetchIpc($ipcPath);
+
 try {
     writeAtomic($ratesPath, $json);
+    if ($ipc) {
+        writeAtomic($ipcPath, json_encode($ipc, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
+    }
     writeAtomic("$outDir/history/" . gmdate('Y-m-d') . '.json', $json);
 
     if (!is_file("$outDir/.htaccess")) {

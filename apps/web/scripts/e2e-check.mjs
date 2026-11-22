@@ -18,7 +18,7 @@ import puppeteer from 'puppeteer-core'
 
 const PORT = 4199
 // Páginas de herramientas que se revisan en el chequeo de desborde (sumar las nuevas).
-const TOOL_PAGES = ['/numeros/romanos', '/numeros/bases', '/numeros/a-letras']
+const TOOL_PAGES = ['/numeros/romanos', '/numeros/bases', '/numeros/a-letras', '/dolar', '/inflacion', '/cuotas', '/plazo-fijo', '/iva']
 const BASE = `http://127.0.0.1:${PORT}`
 const SHOTS = process.argv.find(a => a.startsWith('--shots='))?.slice(8)
 if (SHOTS) mkdirSync(SHOTS, { recursive: true })
@@ -127,6 +127,22 @@ try {
   check('bases: 255 = 1111 1111 = FF', (await outputs()).includes('1111 1111') && (await outputs()).includes('FF'))
   await page.goto(`${BASE}/numeros/a-letras`, { waitUntil: 'networkidle0' })
   check('a letras: 1234,50', (await outputs()).includes('Mil doscientos treinta y cuatro pesos con 50/100'), (await outputs()).join(' | '))
+  await page.goto(`${BASE}/iva`, { waitUntil: 'networkidle0' })
+  check('IVA: $ 1.000 + 21 % = $ 1.210,00', (await outputs()).some(o => o.replace(/\s/g, ' ') === '$ 1.210,00'), (await outputs()).join(' | '))
+  await page.goto(`${BASE}/plazo-fijo`, { waitUntil: 'networkidle0' })
+  check('plazo fijo: $ 1.000.000 al 30 % por 30 días = $ 24.657,53', (await outputs()).some(o => o.replace(/\s/g, ' ') === '$ 24.657,53'), (await outputs()).join(' | '))
+  await page.goto(`${BASE}/dolar`, { waitUntil: 'networkidle0' })
+  await page.waitForFunction(() => document.querySelectorAll('[aria-pressed]').length >= 5, { timeout: 8000 }).catch(() => {})
+  check('dólar: tarjetas de cada cotización', (await page.$$('[aria-pressed]')).length >= 5)
+  check('dólar: conversor con el blue', (await outputs()).some(o => /^\$\s[\d.]+,\d{2}$/.test(o)), (await outputs()).join(' | '))
+  await page.goto(`${BASE}/inflacion`, { waitUntil: 'networkidle0' })
+  await page.waitForFunction(() => /Inflación acumulada/.test(document.body.textContent), { timeout: 8000 }).catch(() => {})
+  check('inflación: ajusta $ 10.000 de enero de 2019', /Inflación acumulada/.test(await page.evaluate(() => document.body.textContent)), (await outputs()).join(' | '))
+  await page.goto(`${BASE}/cuotas`, { waitUntil: 'networkidle0' })
+  await page.waitForFunction(() => /Conviene (en cuotas|de contado)|Da lo mismo/.test(document.body.textContent), { timeout: 8000 }).catch(() => {})
+  // El veredicto depende de la inflación del mes: se chequea que haya uno y que use la sugerida del IPC.
+  const cuotasText = await page.evaluate(() => document.body.textContent)
+  check('cuotas: veredicto con la inflación del IPC', /Conviene (en cuotas|de contado)|Da lo mismo/.test(cuotasText) && /Sugerida: promedio/.test(cuotasText), cuotasText.match(/Conviene [a-z ]+|Da lo mismo/)?.[0])
   const sitemapXml = await (await fetch(`${BASE}/sitemap.xml`)).text()
   check('sitemap.xml lista categorías y herramientas', sitemapXml.includes('/longitud/pies-a-metros</loc>') && sitemapXml.includes('/numeros/romanos</loc>'))
 
