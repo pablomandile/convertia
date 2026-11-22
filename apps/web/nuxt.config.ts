@@ -5,6 +5,10 @@ import tailwindcss from '@tailwindcss/vite'
 import { categories, pairSlug } from '@convertia/core'
 import { currencyPairPath, popularCurrencyPairs } from './app/utils/popular'
 import { BACKGROUND_COLOR, BRAND_COLOR, ICON_VERSION } from './app/utils/pwa'
+import { tools } from './app/utils/tools'
+
+// URL pública, para el sitemap y las URL canónicas.
+const SITE_URL = (process.env.SITE_URL ?? 'https://convertia.bambudev.com.ar').replace(/\/$/, '')
 
 // Rutas que se prerenderizan: cada categoría, sus pares populares y los pares de monedas populares.
 // El resto de los pares se resuelve en el navegador vía 200.html (ver public/.htaccess).
@@ -19,7 +23,14 @@ const prerenderRoutes = [
     ]
   }),
   ...popularCurrencyPairs.map(([from, to]) => currencyPairPath(from, to)),
+  ...tools.map(t => t.path),
 ]
+
+function sitemap(routes: string[]): string {
+  const today = new Date().toISOString().slice(0, 10)
+  const urls = [...new Set(routes)].sort().map(r => `  <url><loc>${SITE_URL}${r === '/' ? '/' : r}</loc><lastmod>${today}</lastmod></url>`)
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`
+}
 
 const icon = (file: string) => `/icons/${file}?v=${ICON_VERSION}`
 
@@ -93,6 +104,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       ratesUrl: '/api/v1/rates.json',
+      siteUrl: SITE_URL,
     },
   },
 
@@ -123,6 +135,8 @@ export default defineNuxtConfig({
       await rm(join(publicDir, 'api'), { recursive: true, force: true })
 
       await writeFile(join(publicDir, 'manifest.webmanifest'), JSON.stringify(manifest, null, 2))
+      await writeFile(join(publicDir, 'sitemap.xml'), sitemap(prerenderRoutes))
+      await writeFile(join(publicDir, 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE_URL}/sitemap.xml\n`)
 
       // Service worker con la lista real de /_nuxt/ y un nombre de caché que cambia con el contenido.
       const assets = (await listFiles(join(publicDir, '_nuxt')))

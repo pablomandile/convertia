@@ -17,6 +17,8 @@ import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer-core'
 
 const PORT = 4199
+// Páginas de herramientas que se revisan en el chequeo de desborde (sumar las nuevas).
+const TOOL_PAGES = ['/numeros/romanos', '/numeros/bases', '/numeros/a-letras']
 const BASE = `http://127.0.0.1:${PORT}`
 const SHOTS = process.argv.find(a => a.startsWith('--shots='))?.slice(8)
 if (SHOTS) mkdirSync(SHOTS, { recursive: true })
@@ -117,8 +119,19 @@ try {
   check('muestra los dólares de Argentina', await page.$$eval('section h2', hs => hs.some(h => h.textContent.includes('Dólares en Argentina'))))
   await shot('usd-a-ars-390')
 
+  // 6b. Herramientas (valores por defecto de cada página)
+  const outputs = async () => page.$$eval('output', els => els.map(e => e.textContent.trim()))
+  await page.goto(`${BASE}/numeros/romanos`, { waitUntil: 'networkidle0' })
+  check('romanos: 2026 = MMXXVI', (await outputs()).includes('MMXXVI'))
+  await page.goto(`${BASE}/numeros/bases`, { waitUntil: 'networkidle0' })
+  check('bases: 255 = 1111 1111 = FF', (await outputs()).includes('1111 1111') && (await outputs()).includes('FF'))
+  await page.goto(`${BASE}/numeros/a-letras`, { waitUntil: 'networkidle0' })
+  check('a letras: 1234,50', (await outputs()).includes('Mil doscientos treinta y cuatro pesos con 50/100'), (await outputs()).join(' | '))
+  const sitemapXml = await (await fetch(`${BASE}/sitemap.xml`)).text()
+  check('sitemap.xml lista categorías y herramientas', sitemapXml.includes('/longitud/pies-a-metros</loc>') && sitemapXml.includes('/numeros/romanos</loc>'))
+
   // 7. Desborde horizontal
-  const pages = ['/', '/longitud/pies-a-metros', '/consumo-de-combustible/millas-por-galon-ee-uu-a-litros-cada-100-km', '/monedas/usd-a-ars', '/densidad']
+  const pages = ['/', '/longitud/pies-a-metros', '/consumo-de-combustible/millas-por-galon-ee-uu-a-litros-cada-100-km', '/monedas/usd-a-ars', '/densidad', ...TOOL_PAGES]
   for (const width of [320, 390]) {
     await page.setViewport({ width, height: 800, isMobile: true, hasTouch: true })
     for (const p of pages) {

@@ -60,6 +60,19 @@ const isHome = computed(() => route.path === '/')
             {{ c.name.es }}
           </NuxtLink>
         </nav>
+        <nav
+          aria-label="Herramientas"
+          class="mt-4 flex flex-wrap gap-x-4 gap-y-2"
+        >
+          <NuxtLink
+            v-for="t in tools"
+            :key="t.path"
+            :to="t.path"
+            class="hover:text-brand-700 dark:hover:text-brand-500"
+          >
+            {{ t.name }}
+          </NuxtLink>
+        </nav>
         <p class="mt-6">
           Cotizaciones:
           <a

@@ -122,6 +122,32 @@ useSeoMeta({
       </div>
     </section>
 
+    <section
+      v-for="g in toolsByGroup()"
+      :key="g.group"
+    >
+      <h2 class="text-lg font-semibold">
+        {{ g.label }}
+      </h2>
+      <div class="mt-3 grid gap-2 sm:grid-cols-2">
+        <NuxtLink
+          v-for="t in g.items"
+          :key="t.path"
+          :to="t.path"
+          class="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 p-3 hover:border-brand-500 dark:border-slate-800"
+        >
+          <span
+            class="text-xl"
+            aria-hidden="true"
+          >{{ t.emoji }}</span>
+          <span class="min-w-0">
+            <span class="block font-medium leading-tight">{{ t.name }}</span>
+            <span class="mt-0.5 block text-sm text-slate-600 dark:text-slate-400">{{ t.description }}</span>
+          </span>
+        </NuxtLink>
+      </div>
+    </section>
+
     <section>
       <h2 class="text-lg font-semibold">
         Monedas más buscadas
