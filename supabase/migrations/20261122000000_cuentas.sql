@@ -162,3 +162,13 @@ grant execute on function public.delete_my_account() to authenticated;
 -- Las funciones de los triggers no se llaman a mano.
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
 revoke execute on function public.user_items_limit() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Permisos de la API, explícitos: no dependen de los permisos por defecto del proyecto
+-- («Grant API access to new tables automatically» queda apagado en la nube).
+-- Sin sesión no se toca nada; con sesión, solo lo que las políticas de arriba permiten.
+-- ---------------------------------------------------------------------------
+revoke all on table public.profiles, public.user_items, public.user_settings from anon, authenticated;
+grant select on table public.profiles to authenticated;
+grant select, insert, update, delete on table public.user_items to authenticated;
+grant select, insert, update on table public.user_settings to authenticated;
