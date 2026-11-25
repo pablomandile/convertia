@@ -184,7 +184,7 @@ try {
   await a.evaluate(() => [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'Eliminar cuenta')?.click())
   await a.waitForSelector('[role="alertdialog"]')
   await a.evaluate(() => [...document.querySelectorAll('[role="alertdialog"] button')].find(x => x.textContent.includes('Eliminar definitivamente'))?.click())
-  await waitFor(async () => (await body(a)).includes('Entrar con Google'))
+  await waitFor(async () => (await body(a)).includes('Acepto los'))
   const { error: gone2 } = await admin.auth.admin.getUserById(uid)
   const rows = (await admin.from('user_items').select('key').eq('user_id', uid)).data ?? []
   check('eliminar cuenta la borra en el momento, con sus datos', !!gone2 && rows.length === 0)

@@ -15,6 +15,9 @@ export function useAuth() {
   const user = useState<User | null>('auth:user', () => null)
   const ready = useState('auth:ready', () => false)
   const profile = useState<Profile | null>('auth:profile', () => null)
+  // Google aparece solo si está activado en el proyecto de Supabase (se consulta en el navegador, al
+  // iniciar): así se prende o se apaga desde el panel, sin otro deploy. En el prerender es false.
+  const googleEnabled = useState('auth:google', () => false)
 
   // De la configuración y no del cliente: el cliente solo existe en el navegador, y esto tiene
   // que dar lo mismo en el prerender para no romper la hidratación.
@@ -54,6 +57,10 @@ export function useAuth() {
   function init(client: SupabaseClient) {
     if (initialized) return
     initialized = true
+    fetch(`${supabaseUrl}/auth/v1/settings`, { headers: { apikey: supabaseKey } })
+      .then(r => (r.ok ? r.json() : null))
+      .then((s) => { googleEnabled.value = s?.external?.google === true })
+      .catch(() => { /* sin red: queda solo el mail */ })
     client.auth.getSession().then(({ data }) => onSession(data.session?.user ?? null))
     client.auth.onAuthStateChange((_event, session) => {
       // No usar await adentro del callback (lo recomienda supabase-js): se difiere.
@@ -147,7 +154,7 @@ export function useAuth() {
   }
 
   return {
-    enabled, user, ready, profile, termsOk, needsTerms,
+    enabled, googleEnabled, user, ready, profile, termsOk, needsTerms,
     init, sendMagicLink, verifyCode, signInWithGoogle, acceptTerms, signOut, deleteAccount, exportData,
   }
 }
