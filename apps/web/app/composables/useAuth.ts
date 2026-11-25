@@ -1,4 +1,5 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js'
+import { toast } from 'vue-sonner'
 
 interface Profile {
   terms_version: string | null
@@ -18,6 +19,10 @@ export function useAuth() {
   // Google aparece solo si está activado en el proyecto de Supabase (se consulta en el navegador, al
   // iniciar): así se prende o se apaga desde el panel, sin otro deploy. En el prerender es false.
   const googleEnabled = useState('auth:google', () => false)
+  // Se acaba de entrar (volviendo del link, de Google o con el código): al terminar, al inicio. Si faltan
+  // los términos, primero a /cuenta a aceptarlos (el link abre otra pestaña y la casilla no viaja).
+  const justSignedIn = useState('auth:just-signed-in', () => false)
+  const router = nuxtApp.$router
 
   // De la configuración y no del cliente: el cliente solo existe en el navegador, y esto tiene
   // que dar lo mismo en el prerender para no romper la hidratación.
@@ -51,12 +56,24 @@ export function useAuth() {
     if (changed) await loadProfile()
     ready.value = true
     if (user.value && termsOk.value) useSync().syncNow()
+    if (justSignedIn.value && user.value && profile.value) {
+      if (termsOk.value) finishSignIn()
+      else if (router.currentRoute.value.path !== '/cuenta') router.replace('/cuenta')
+    }
+  }
+
+  function finishSignIn() {
+    justSignedIn.value = false
+    if (router.currentRoute.value.path !== '/') router.replace('/')
+    toast.success('Entraste a tu cuenta', { description: user.value?.email ?? undefined })
   }
 
   let initialized = false
   function init(client: SupabaseClient) {
     if (initialized) return
     initialized = true
+    // Vuelta del link o de Google (PKCE): la URL trae ?code=…, que supabase-js canjea por la sesión.
+    if (new URLSearchParams(window.location.search).has('code')) justSignedIn.value = true
     fetch(`${supabaseUrl}/auth/v1/settings`, { headers: { apikey: supabaseKey } })
       .then(r => (r.ok ? r.json() : null))
       .then((s) => { googleEnabled.value = s?.external?.google === true })
@@ -75,7 +92,7 @@ export function useAuth() {
     catch { /* si no se puede, se pide en la pantalla de aceptación */ }
   }
 
-  const redirectTo = () => `${window.location.origin}/cuenta`
+  const redirectTo = () => `${window.location.origin}/`
 
   async function sendMagicLink(email: string) {
     if (!supabase) throw new Error('Las cuentas no están disponibles')
@@ -86,8 +103,12 @@ export function useAuth() {
 
   async function verifyCode(email: string, token: string) {
     if (!supabase) throw new Error('Las cuentas no están disponibles')
+    justSignedIn.value = true
     const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
-    if (error) throw error
+    if (error) {
+      justSignedIn.value = false
+      throw error
+    }
   }
 
   async function signInWithGoogle() {
@@ -107,6 +128,7 @@ export function useAuth() {
     catch { /* nada */ }
     profile.value = { terms_version: LEGAL_VERSION, terms_accepted_at: new Date().toISOString() }
     useSync().syncNow()
+    if (justSignedIn.value) finishSignIn()
   }
 
   async function signOut() {
